@@ -246,7 +246,7 @@ for i in range(len(total_data)):
     generated_keyphrases = keyphrase_generator(total_data[i]['title'],total_data[i]['abstract'])
     generated_text = generated_keyphrases[0].outputs[0].text
     log_probs = generated_keyphrases[0].outputs[0].logprobs
-    if i % 100 == 0:
+    if i % 10 == 0:
         print(f"{i} Documents Processed")
     a='['+generated_keyphrases[0].outputs[0].text
     data_list=(remove_numbers_and_dots_from_string(a.strip('[]'))).replace('"', '').replace('",', '').split(', ')
