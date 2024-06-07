@@ -18,7 +18,7 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 login("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")
-llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=1,max_model_len=4096,tensor_parallel_size=2)  
+llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.95,max_model_len=4096,tensor_parallel_size=2)  
 
 #dataset = load_dataset("taln-ls2n/semeval-2010-pre",trust_remote_code=True)
 dataset = load_dataset("taln-ls2n/kp20k")
