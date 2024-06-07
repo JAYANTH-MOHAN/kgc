@@ -242,11 +242,11 @@ with Pool(num_cores) as pool:
 all_pred_keyphrases = []
 output_text = ""  # Initialize an empty string to hold the output
 
-for i in range(len(total_data)-19995):
+for i in range(len(total_data)):
     generated_keyphrases = keyphrase_generator(total_data[i]['title'],total_data[i]['abstract'])
     generated_text = generated_keyphrases[0].outputs[0].text
     log_probs = generated_keyphrases[0].outputs[0].logprobs
-    if i % 1 == 0:
+    if i % 100 == 0:
         print(f"{i} Documents Processed")
     a='['+generated_keyphrases[0].outputs[0].text
     data_list=(remove_numbers_and_dots_from_string(a.strip('[]'))).replace('"', '').replace('",', '').split(', ')
@@ -317,7 +317,7 @@ def is_keyphrase_present(src, keyphrase):
     return re.search(r'\b{}\b'.format(re.escape(keyphrase_str)), src_str, re.IGNORECASE) is not None
 
 # Iterate over the indices of total_data
-for idx in range(len(total_data)-19995):
+for idx in range(len(total_data)):
     abstract = total_data[idx]['abstract']
     processed_abstract = preprocess_abstract(abstract)
     if i % 1000 == 0:
