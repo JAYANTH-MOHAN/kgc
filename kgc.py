@@ -13,16 +13,16 @@ import pandas as pd
 import re
 import nltk
 import ast
+import os
 
-def start():
-    nltk.download('punkt')
-    nltk.download('stopwords')
-    nltk.download('wordnet')
-    login("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")
-    return None
-start()
+nltk.download('punkt', quiet=True)
+nltk.download('stopwords', quiet=True)
+nltk.download('wordnet', quiet=True)
+login("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")
+llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.9,max_model_len=4096,tensor_parallel_size=2)
 
-llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.9,max_model_len=4096,tensor_parallel_size=2)  
+
+  
 
 #dataset = load_dataset("taln-ls2n/semeval-2010-pre",trust_remote_code=True)
 dataset = load_dataset("taln-ls2n/kp20k")
@@ -246,11 +246,11 @@ with Pool(num_cores) as pool:
 all_pred_keyphrases = []
 output_text = ""  # Initialize an empty string to hold the output
 
-for i in range(len(total_data)-19995):
+for i in range(len(total_data)):
     generated_keyphrases = keyphrase_generator(total_data[i]['title'],total_data[i]['abstract'])
     generated_text = generated_keyphrases[0].outputs[0].text
     log_probs = generated_keyphrases[0].outputs[0].logprobs
-    if i % 1 == 0:
+    if i % 10 == 0:
         print(f"{i} Documents Processed")
     a='['+generated_keyphrases[0].outputs[0].text
     data_list=(remove_numbers_and_dots_from_string(a.strip('[]'))).replace('"', '').replace('",', '').split(', ')
@@ -324,11 +324,11 @@ def is_keyphrase_present(src, keyphrase):
     return re.search(r'\b{}\b'.format(re.escape(keyphrase_str)), src_str, re.IGNORECASE) is not None
 
 # Iterate over the indices of total_data
-for idx in range(len(total_data)-19995):
+for idx in range(len(total_data)):
     abstract = total_data[idx]['abstract']
     processed_abstract = preprocess_abstract(abstract)
     if i % 1000 == 0:
-        print(f"{i} Documents Processed")
+        print(f"{i} Predictions present and absent Processed")
     # Assuming all_pred_keyphrases is a list of keyphrases for each abstract
     processed_preds= [preprocess_abstract(f"{item.strip()}") for item in all_pred_keyphrases[idx]]
     pred_present = []
