@@ -13,11 +13,12 @@ import pandas as pd
 import re
 import nltk
 import ast
+import os
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 login("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")
-llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.9,max_model_len=4096,tensor_parallel_size=2)  
+llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=1,max_model_len=4096,tensor_parallel_size=2)  
 
 #dataset = load_dataset("taln-ls2n/semeval-2010-pre",trust_remote_code=True)
 dataset = load_dataset("taln-ls2n/kp20k")
@@ -292,13 +293,18 @@ output_text += "----------------------------------------------------------------
 output_text += str(all_pred_keyphrases)
 
 
-with open('Phi_KP20K.txt', 'w') as file:
+output_dir = "/opt/repo/kgc"
+os.makedirs(output_dir, exist_ok=True)
+file_path = os.path.join(output_dir, "Phi_KP20K.txt")
+with open(file_path, 'w') as file:
     for item in all_pred_keyphrases:
         file.write(f"{item}\n")
     
+if os.path.exists(file_path):
+    print("File saved successfully.")
+else:
+    print("Error: File not saved.")
 
-    
-import re
 
 pred_present_lists = []
 pred_absent_lists = []
