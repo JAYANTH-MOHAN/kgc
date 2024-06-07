@@ -13,12 +13,16 @@ import pandas as pd
 import re
 import nltk
 import ast
-import os
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
-login("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")
-llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.95,max_model_len=4096,tensor_parallel_size=2)  
+
+def start():
+    nltk.download('punkt')
+    nltk.download('stopwords')
+    nltk.download('wordnet')
+    login("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")
+    return None
+start()
+
+llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.9,max_model_len=4096,tensor_parallel_size=2)  
 
 #dataset = load_dataset("taln-ls2n/semeval-2010-pre",trust_remote_code=True)
 dataset = load_dataset("taln-ls2n/kp20k")
@@ -158,6 +162,15 @@ for keyphrase in keyphrases:
         tokenized_keyphrases.append(' '.join(temp_keyphrase_tokens))
         keyphrase_kpp_s_values.append(kpp_s_normalized)
 
+# Print keyphrases with their normalized KPP-s values
+print("Keyphrases with their normalized KPP-s values and word counts:")
+print("---------------------------------------------------------------------")
+print("| Keyphrase                        | KPP-s Value | Word Count |")
+print("---------------------------------------------------------------------")
+for keyphrase, kpp_s, count in zip(tokenized_keyphrases, keyphrase_kpp_s_values, word_counts):
+    print(f"| {keyphrase:32s} | {kpp_s:.5f}   | {count:10d} |")
+print("---------------------------------------------------------------------")
+
 
 
 
@@ -228,16 +241,16 @@ with Pool(num_cores) as pool:
     results = pool.map(process_abstract, range(len(abstracts_all)))
     gt_present_lists, gt_absent_lists = zip(*results)
     
-print("Ground_Truth Present and absent lists Generated")
+    
     
 all_pred_keyphrases = []
 output_text = ""  # Initialize an empty string to hold the output
 
-for i in range(len(total_data)):
+for i in range(len(total_data)-19995):
     generated_keyphrases = keyphrase_generator(total_data[i]['title'],total_data[i]['abstract'])
     generated_text = generated_keyphrases[0].outputs[0].text
     log_probs = generated_keyphrases[0].outputs[0].logprobs
-    if i % 10 == 0:
+    if i % 1 == 0:
         print(f"{i} Documents Processed")
     a='['+generated_keyphrases[0].outputs[0].text
     data_list=(remove_numbers_and_dots_from_string(a.strip('[]'))).replace('"', '').replace('",', '').split(', ')
@@ -284,6 +297,8 @@ output_text += "----------------------------------------------------------------
 output_text += str(all_pred_keyphrases)
 
 
+
+
 output_dir = "/mnt/jayanth-llama-volume/kgc"
 os.makedirs(output_dir, exist_ok=True)
 file_path = os.path.join(output_dir, "Phi_KP20K.txt")
@@ -297,6 +312,7 @@ else:
     print("Error: File not saved.")
 
 
+
 pred_present_lists = []
 pred_absent_lists = []
 
@@ -308,7 +324,7 @@ def is_keyphrase_present(src, keyphrase):
     return re.search(r'\b{}\b'.format(re.escape(keyphrase_str)), src_str, re.IGNORECASE) is not None
 
 # Iterate over the indices of total_data
-for idx in range(len(total_data)):
+for idx in range(len(total_data)-19995):
     abstract = total_data[idx]['abstract']
     processed_abstract = preprocess_abstract(abstract)
     if i % 1000 == 0:
