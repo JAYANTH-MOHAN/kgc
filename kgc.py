@@ -251,7 +251,7 @@ for i in range(len(total_data)):
     generated_text = generated_keyphrases[0].outputs[0].text
     log_probs = generated_keyphrases[0].outputs[0].logprobs
     if i % 1 == 0:
-        print(f"{i} Documents Processed")
+        print(f"{i} Documents Processed",flush=True)
     a='['+generated_keyphrases[0].outputs[0].text
     data_list=(remove_numbers_and_dots_from_string(a.strip('[]'))).replace('"', '').replace('",', '').split(', ')
     all_pred_keyphrases.append(data_list)
