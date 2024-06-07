@@ -158,15 +158,6 @@ for keyphrase in keyphrases:
         tokenized_keyphrases.append(' '.join(temp_keyphrase_tokens))
         keyphrase_kpp_s_values.append(kpp_s_normalized)
 
-# Print keyphrases with their normalized KPP-s values
-print("Keyphrases with their normalized KPP-s values and word counts:")
-print("---------------------------------------------------------------------")
-print("| Keyphrase                        | KPP-s Value | Word Count |")
-print("---------------------------------------------------------------------")
-for keyphrase, kpp_s, count in zip(tokenized_keyphrases, keyphrase_kpp_s_values, word_counts):
-    print(f"| {keyphrase:32s} | {kpp_s:.5f}   | {count:10d} |")
-print("---------------------------------------------------------------------")
-
 
 
 
@@ -237,7 +228,7 @@ with Pool(num_cores) as pool:
     results = pool.map(process_abstract, range(len(abstracts_all)))
     gt_present_lists, gt_absent_lists = zip(*results)
     
-    
+print("Ground_Truth Present and absent lists Generated")
     
 all_pred_keyphrases = []
 output_text = ""  # Initialize an empty string to hold the output
