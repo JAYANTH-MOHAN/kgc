@@ -50,7 +50,7 @@ def prepend_title_to_abstract(titles, abstracts):
     return combined_abstracts
 
 def remove_numbers_and_dots_from_string(s):
-    return re.sub(r'[\d\.\-\\\/\!\(\)\?=]+', '', s)
+    return re.sub(r'[\/\\=?]+', '', s)
 
 
 
