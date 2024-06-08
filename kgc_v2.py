@@ -90,7 +90,19 @@ def keyphrase_generator(title,abstract):
     outputs = llm.generate(request, sampling_params,use_tqdm=False)
     
     return outputs
-
+    
+def calculate_kpp_s(keyphrase_tokens, token_info_list):
+    product = 1.0
+    for token_info in token_info_list:
+        log_prob = token_info['log_prob']
+        conditional_prob = np.exp(log_prob)
+        product *= conditional_prob
+    wc = len(keyphrase_tokens)
+    if wc == 0:
+        return 0.0  # Return 0 if the number of tokens is zero
+    kpp = (product ** (-1 / wc))
+    return kpp
+    
 def is_keyphrase_present(src, keyphrase):
     # Modified to check for whole words only
     presence = re.search(r'\b{}\b'.format(re.escape(keyphrase)), src, re.IGNORECASE) is not None
