@@ -205,7 +205,7 @@ output_text += str(all_pred_keyphrases)
 
 output_dir = "/mnt/jayanth-llama-volume/kgc"
 os.makedirs(output_dir, exist_ok=True)
-file_path = os.path.join(output_dir, "Phi_latest_final.txt")
+file_path = os.path.join(output_dir, "Phi_latest_final_a100.txt")
 with open(file_path, 'w') as file:
     for item in all_pred_keyphrases:
         file.write(f"{item}\n")
