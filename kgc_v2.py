@@ -18,7 +18,7 @@ nltk.download('punkt',quiet=True)
 nltk.download('stopwords',quiet=True)
 nltk.download('wordnet',quiet=True)
 login("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")
-llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.9,max_model_len=4096,tensor_parallel_size=3) 
+llm = LLM(model="microsoft/Phi-3-mini-128k-instruct",gpu_memory_utilization=0.9,max_model_len=4096,tensor_parallel_size=4) 
 
 
 dataset = load_dataset("taln-ls2n/kp20k",trust_remote_code=True)
