@@ -49,8 +49,7 @@ def prepend_title_to_abstract(titles, abstracts):
         combined_abstracts.append(combined_abstract)
     return combined_abstracts
 
-def remove_numbers_and_dots_from_string(s):
-    return re.sub(r'[\d\.\-\\\/\!\(\)\?=]+', '', s)
+
 
 
 
@@ -148,14 +147,14 @@ print()
 all_pred_keyphrases = []
 output_text = ""  # Initialize an empty string to hold the output
 
-for i in range(len(total_data)):
+for i in range(len(total_data-19500)):
     generated_keyphrases = keyphrase_generator(total_data[i]['title'],total_data[i]['abstract'])
     generated_text = generated_keyphrases[0].outputs[0].text
     log_probs = generated_keyphrases[0].outputs[0].logprobs
     if i % 100 == 0:
         print(f"{i} Documents Processed", flush=True)
     a='['+generated_keyphrases[0].outputs[0].text
-    data_list=(remove_numbers_and_dots_from_string(a.strip('[]'))).replace('"', '').replace('",', '').split(', ')
+    data_list=(a.strip('[]')).replace('"', '').replace('",', '').split(', ')
     all_pred_keyphrases.append(data_list)
 
 
@@ -204,18 +203,18 @@ with open("kpp_keygen.txt", "w") as file:
 
 
 
-output_dir = "/mnt/jayanth-llama-volume/kgc"
-os.makedirs(output_dir, exist_ok=True)
-file_path = os.path.join(output_dir, "Phi_KP20K_v2.txt")
-with open(file_path, 'w') as file:
-    for item in all_pred_keyphrases:
-        file.write(f"{item}\n")
-    
-if os.path.exists(file_path):
-    print("File saved successfully.")
-else:
-    print("Error: File not saved.")
-
+#output_dir = "/mnt/jayanth-llama-volume/kgc"
+#os.makedirs(output_dir, exist_ok=True)
+#file_path = os.path.join(output_dir, "Phi_KP20K_v2.txt")
+#with open(file_path, 'w') as file:
+#    for item in all_pred_keyphrases:
+#        file.write(f"{item}\n")
+#    
+#if os.path.exists(file_path):
+#    print("File saved successfully.")
+#else:
+#    print("Error: File not saved.")
+#
 import re
 
 pred_present_lists = []
@@ -228,7 +227,7 @@ def is_keyphrase_present(src, keyphrase):
     return re.search(r'\b{}\b'.format(re.escape(keyphrase_str)), src_str, re.IGNORECASE) is not None
 
 # Iterate over the indices of total_data
-for idx in range(len(total_data)):
+for idx in range(len(total_data)-19500):
     abstract = abstracts_all[idx]
     processed_abstract = preprocess_abstract((abstract))
     
