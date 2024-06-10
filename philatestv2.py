@@ -330,13 +330,13 @@ data_dict = {
     'absent_kpp':all_kpp_values_absent
 }
 
-file_path = os.path.join(output_dir,'Phi_KP20K_all_output.json')
-
 # Write the dictionary to a JSON file
+file_path = os.path.join(output_dir, 'Phi_KP20K_all_output.json')
 with open(file_path, 'w') as json_file:
     json.dump(data_dict, json_file)
 
-print("Data saved successfully.")
+
+print("Json Data saved successfully.")
 
 
 
@@ -454,10 +454,6 @@ for topk, f1_score in results['avg_f1_scores_absent'].items():
 
 
 
-# Write the dictionary to a JSON file
-file_path = os.path.join(output_dir, 'Phi_KP20K_all_output.json')
-with open(file_path, 'w') as json_file:
-    json.dump(data_dict, json_file)
 
 # Write pred_present_lists to a file
 file_path = os.path.join(output_dir, 'Phi_KP20K_pred_present_lists.txt')
