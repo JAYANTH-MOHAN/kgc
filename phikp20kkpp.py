@@ -80,7 +80,7 @@ def keyphrase_generator(title,abstract):
 
     request = prompt_2
     sampling_params = SamplingParams(temperature=0,top_p=0.5,top_k=-1,min_p=0.4,logprobs=1,seed=42,max_tokens=500)
-    outputs = llm.generate(request, sampling_params)
+    outputs = llm.generate(request, sampling_params,use_tqdm=False)
     
     return outputs
 
