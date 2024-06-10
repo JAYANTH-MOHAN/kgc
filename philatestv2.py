@@ -48,24 +48,10 @@ def prepend_title_to_abstract(titles, abstracts):
         combined_abstracts.append(combined_abstract)
     return combined_abstracts
 
-def calculate_kpp_s(keyphrase_tokens, token_info_list):
-    product = 1.0
-    for token_info in token_info_list:
-        log_prob = token_info['log_prob']
-        conditional_prob = np.exp(log_prob)
-        product *= conditional_prob
-    wc = len(keyphrase_tokens)
-    if wc == 0:
-        return 0.0  # Return 0 if the number of tokens is zero
-    kpp = (product ** (-1 / wc))
-    return kpp
-
-
 titles = dataset['test']['title']
 abstracts = dataset['test']['abstract']
 ground_truth_keyphrases = dataset["test"]["keyphrases"]
 abstracts_all = prepend_title_to_abstract(titles, abstracts)
-
 
 
 total_data = {}
@@ -78,27 +64,27 @@ for i in range(len(abstracts)):
     processed_keys = [preprocess_abstract(word) for word in keyphrases_list]
     preprocessed_keyphrases.append(processed_keys)
 
+print(preprocessed_keyphrases[0])
+len(dataset["test"]['keyphrases'])==len(preprocessed_keyphrases)
+
 
 system_prompt = "You are an expert in finding the best keyphrases to represent the topical information of a scientific document just from reading its title and abstract."
-user_prompt1 = "Generate present and absent keyphrases from the following title and abstract of a scientific document."
-INS1 = "1. List the most appropriate and essential keyphrases. Each keyphrase should consist of only one to three words. Do not create too many keyphrases.\n2. Only respond with a list of comma-separated keyphrases in the following format: [\"keyphrase 1\", \"keyphrase 2\", ..., \"keyphrase n\"]"
-
+user_prompt = "Generate present and absent keyphrases from the following title and abstract of a scientific document."
+INS1 = "1. List the most appropriate and essential keyphrases. Each keyphrase should consist of only one to three words. Do not create too many keyphrases. \n2. Only respond with a list of comma-separated keyphrases in the following format: [\"keyphrase 1\", \"keyphrase 2\", ..., \"keyphrase n\"]"
 
 def keyphrase_generator(title,abstract):
     
     
   
-    prompt_try_2= f'''<|user|>\n{user_prompt1}\n**Title:** \"{title}\"\n\n**Abstract:** \"{abstract}\"\n\n **Instructions:** \n{INS1} <|end|>\n<|assistant|>\n'''
-    
-    prompt_try_3= f"<|system|>\n{system_prompt}<|end|>\n<|user|>\n{user_prompt1}\n**Title:** \"{title}\"\n\n**Abstract:** \"{abstract}\"\n\n **Instructions:** \n{INS1} <|end|>\n<|assistant|>\n["
+    prompt_2= f"<|system|>\n{system_prompt}<|end|>\n<|user|>\n{user_prompt}\n**Title:** \"{title}\"\n\n**Abstract:** \"{abstract}\"\n\n **Instructions:** \n{INS1} <|end|>\n<|assistant|>\n["
 
-
-
-    request = prompt_try_3
+    request = prompt_2
     sampling_params = SamplingParams(temperature=0,top_p=0.5,top_k=-1,min_p=0.4,logprobs=1,seed=42,max_tokens=500)
-    outputs = llm.generate(request, sampling_params,use_tqdm=False)
+    outputs = llm.generate(request, sampling_params)
     
     return outputs
+
+
 
 
 def is_keyphrase_present(src, keyphrase):
@@ -147,58 +133,39 @@ print()
 
 
 
-all_pred_keyphrases = []
-output_text = ""  # Initialize an empty string to hold the output
+token_indexes, log_probabilities, token_predictions, all_pred_keyphrases = [], [], [], []
+output_text = ""
 
 for i in range(len(total_data)):
     generated_keyphrases = keyphrase_generator(total_data[i]['title'],total_data[i]['abstract'])
     generated_text = generated_keyphrases[0].outputs[0].text
     log_probs = generated_keyphrases[0].outputs[0].logprobs
+    
     if i % 100 == 0:
         print(f"{i} Documents Processed", flush=True)
+        
     a='['+generated_keyphrases[0].outputs[0].text
     data_list=(a.strip('[]')).replace('"', '').replace('",', '').split(', ')
     all_pred_keyphrases.append(data_list)
+    
+    token_info_list = [{'token_id': token_id, 'log_prob': logprob_info.logprob, 'decoded_token': logprob_info.decoded_token} 
+                   for token_probs in log_probs 
+                   for token_id, logprob_info in token_probs.items()]
 
+    index = next((i for i, entry in enumerate(token_info_list) if entry['decoded_token'] == ':\n\n'), 0)
 
+    if index is not None:
+        filtered_data = [(entry['token_id'], entry['log_prob'], entry['decoded_token']) 
+                         for entry in token_info_list[index + 0:] if ' "' not in entry['decoded_token'] and '<|end|>' not in entry['decoded_token'] and '[' not in entry['decoded_token']  and ']' not in entry['decoded_token'] ]
+        list1, list2, list3 = [list(item) for item in zip(*filtered_data)]
+        token_indexes.append(list1)
+        log_probabilities.append(list2)
+        token_predictions.append(list3)
+    else:
+        print("':\\n\\n' not found in the list.")
+        
+kp_predictions=all_pred_keyphrases    
 
-    token_info_list = [
-        {'token_id': token_id, 'log_prob': logprob_info.logprob, 'decoded_token': logprob_info.decoded_token}
-        for token_probs in log_probs
-        for token_id, logprob_info in token_probs.items()
-    ]
-
-    temp_keyphrase_tokens = []
-    keyphrases = []
-    keyphrase_kpp_s_values = []
-    word_counts = []
-
-    for token_info in token_info_list:
-        decoded_token = token_info['decoded_token']
-        if decoded_token.strip():
-            temp_keyphrase_tokens.append(decoded_token)
-        else:
-            kpp_s = calculate_kpp_s(temp_keyphrase_tokens, token_info_list)
-            word_count = len(temp_keyphrase_tokens)
-            if word_count != 0:
-                kpp_s_normalized = kpp_s / word_count
-                keyphrases.append(' '.join(temp_keyphrase_tokens))
-                keyphrase_kpp_s_values.append(kpp_s_normalized)
-                word_counts.append(word_count)
-                temp_keyphrase_tokens = []
-
-    output_text += f"Keyphrases with their normalized KPP-s values and word counts for abstract:{i}\n"
-    output_text += "---------------------------------------------------------------------\n"
-    output_text += "| Keyphrase                        | KPP-s Value | Word Count |\n"
-    output_text += "---------------------------------------------------------------------\n"
-    for keyphrase, kpp_s, count in zip(keyphrases, keyphrase_kpp_s_values, word_counts):
-        output_text += f"| {keyphrase:32s} | {kpp_s:.5f}   | {count:10d} |\n"
-    output_text += "---------------------------------------------------------------------\n"
-
-# Print the lists of generated keyphrases
-output_text += "Lists of generated keyphrases:\n"
-output_text += "---------------------------------------------------------------------\n"
-output_text += str(all_pred_keyphrases)
 
 
 
@@ -216,43 +183,160 @@ else:
     print("Error: File not saved.")
 
 
+def calculate_kpp_s(separated_probabilities):
+    kpp_values=[]
+    for prob_list in separated_probabilities:
+        wc = len(prob_list)
+        list_product=1
+        for prob in prob_list:
+            list_product *= prob
+        kpp = (list_product ** (-1 / wc))
+        kpp_values.append(kpp)
+    return kpp_values
+
+
+all_separated_tokens = []
+all_separated_probabilities = []
+
+# Iterate over your dataset
+for token_predictions_instance, probabilities_instance in zip(token_predictions, probabilities):
+    separated_tokens = []
+    separated_probabilities = []
+    
+    # Initialize variables to store tokens and probabilities for the current group
+    current_tokens = []
+    current_probs = []
+    
+    # Iterate through token predictions and log probabilities
+    for token, prob in zip(token_predictions_instance, probabilities_instance):
+        if token != ',' and token != '",' :
+            current_tokens.append(token)
+            current_probs.append(prob)
+        else:
+            # If a comma is encountered, add the current group to the separated lists
+            separated_tokens.append(''.join(current_tokens))
+            separated_probabilities.append(current_probs)
+            # Reset the current group
+            current_tokens = []
+            current_probs = []
+    
+    # Add the last group
+    if current_tokens:
+        separated_tokens.append(''.join(current_tokens))
+        separated_probabilities.append(current_probs)
+    
+    # Append separated tokens and probabilities to the main lists
+    all_separated_tokens.append(separated_tokens)
+    all_separated_probabilities.append(separated_probabilities)
+
+
+print("len(all_separated_probabilities) == len(all_separated_tokens)")
+print(len(all_separated_probabilities) == len(all_separated_tokens))
+
+
+all_kpp_values = []
+for separated_probabilities_instance in all_separated_probabilities:
+    kpp_values_instance = calculate_kpp_s(separated_probabilities_instance)
+    all_kpp_values.append(kpp_values_instance)
+
+print("len(all_kpp_values)")
+print(len(all_kpp_values))
+
+print("finding bugs")
+# Iterate over all instances and check lengths
+for idx, (kpp_values_instance, pred_keyphrases_instance) in enumerate(zip(all_kpp_values, all_pred_keyphrases)):
+    if len(kpp_values_instance) != len(pred_keyphrases_instance):
+        print("Lengths are not equal for instance at index:", idx)
+        print(all_separated_probabilities[idx)
+        print(token_predictions_instance[idx])
+
 
 
 
 import re
 
+# Initialize lists to store present and absent keyphrases and their corresponding kpp values
 pred_present_lists = []
 pred_absent_lists = []
+all_kpp_values_present = []
+all_kpp_values_absent = []
 
 # Function to check if a keyphrase is present in the source text
 def is_keyphrase_present(src, keyphrase):
     src_str = ' '.join(src)  # Join source list into a string
     keyphrase_str = ' '.join(keyphrase)  # Join keyphrase list into a string
+    # Check if keyphrase is present in src
     return re.search(r'\b{}\b'.format(re.escape(keyphrase_str)), src_str, re.IGNORECASE) is not None
 
 # Iterate over the indices of total_data
 for idx in range(len(total_data)):
     abstract = abstracts_all[idx]
-    processed_abstract = preprocess_abstract((abstract))
-    
-    if idx % 1000 == 0:
-        print(f"Generation of Pred Present absent for {idx} Documents Processed",flush=True)
-        
-    processed_preds= [preprocess_abstract((f"{item.strip()}")) for item in all_pred_keyphrases[idx]]
-    
+    processed_abstract = preprocess_abstract(abstract)
+
+    # Assuming all_pred_keyphrases is a list of keyphrases for each abstract
+    processed_preds= [preprocess_abstract(f"{item.strip()}") for item in all_pred_keyphrases[idx]]
     pred_present = []
     pred_absent = []
+    kpp_values_present = []
+    kpp_values_absent = []
 
-    for keyphrase_list in processed_preds:
-        if keyphrase_list: 
-            keyphrase = keyphrase_list 
+    for keyphrase_list, kpp_value in zip(processed_preds, all_kpp_values[idx]):
+        if keyphrase_list:  # Check if keyphrase_list is not empty
+            keyphrase = keyphrase_list  # Assuming each sublist contains only one keyphrase
             if is_keyphrase_present(processed_abstract, keyphrase):
                 pred_present.append(keyphrase)
+                kpp_values_present.append(kpp_value)
             else:
                 pred_absent.append(keyphrase)
+                kpp_values_absent.append(kpp_value)
 
+    # Append present and absent keyphrases and their kpp values to the ordered lists
     pred_present_lists.append(pred_present)
     pred_absent_lists.append(pred_absent)
+    all_kpp_values_present.append(kpp_values_present)
+    all_kpp_values_absent.append(kpp_values_absent)
+
+# Print the lists to verify
+print("Present keyphrases and kpp values:")
+for present_list, kpp_present in zip(pred_present_lists[1], all_kpp_values_present[1]):
+    print(present_list, kpp_present)
+
+print("\nAbsent keyphrases and kpp values:")
+for absent_list, kpp_absent in zip(pred_absent_lists[1], all_kpp_values_absent[1]):
+    print(absent_list, kpp_absent)
+
+
+titles = dataset['test']['title']
+abstracts = dataset['test']['abstract']
+targets=dataset["test"]["keyphrases"]
+def create_src(titles, abstracts):
+    combined_abstracts = []
+    for title, abstract in zip(titles, abstracts):
+        combined_abstract = title +"." + " [sep] " + abstract
+        combined_abstracts.append(combined_abstract + "[digit]")
+    return combined_abstracts
+
+src=create_src(titles, abstracts)
+
+
+data_dict = {
+    'kp_predictions': kp_predictions,
+    'probabilities': probabilities,
+    'token_predictions': token_predictions,
+    'src': src,
+    'targets': targets,
+    'kpp_values':all_kpp_values,
+    'present_kpp':all_kpp_values_present,
+    'absent_kpp':all_kpp_values_absent
+}
+
+file_path = os.path.join(output_dir,'Phi_KP20K_all_output.json')
+
+# Write the dictionary to a JSON file
+with open(file_path, 'w') as json_file:
+    json.dump(data_dict, json_file)
+
+print("Data saved successfully.")
 
 
 
@@ -287,7 +371,6 @@ for i in range(2,4,1):
     print('\n')
     print(f"gt_absent_lists({i})")
     print(gt_absent_lists[i])
-
 
 import copy
 
@@ -351,10 +434,6 @@ def evaluate(pred_present_lists, gt_present_lists, pred_absent_lists, gt_absent_
 
 
 
-system_prompt = "You are an expert in finding the best keyphrases to represent the topical information of a scientific document just from reading its title and abstract."
-user_prompt = "Generate present and absent keyphrases from the following title and abstract of a scientific document."
-INS1 = "1. List the most appropriate and essential keyphrases. Each keyphrase should consist of only one to three words. Do not create too many keyphrases.\n2. Only respond with a list of comma-separated keyphrases in the following format: [\"keyphrase 1\", \"keyphrase 2\", ..., \"keyphrase n\"]"
-
 print("system_prompt:")
 print(system_prompt)
 print("User Prompt:")
@@ -372,3 +451,44 @@ for topk, f1_score in results['avg_f1_scores_present'].items():
 print('\n')
 for topk, f1_score in results['avg_f1_scores_absent'].items():
     print(f"F1@{topk} for absent keyphrases:", f1_score)
+
+
+
+# Write the dictionary to a JSON file
+file_path = os.path.join(output_dir, 'Phi_KP20K_all_output.json')
+with open(file_path, 'w') as json_file:
+    json.dump(data_dict, json_file)
+
+# Write pred_present_lists to a file
+file_path = os.path.join(output_dir, 'Phi_KP20K_pred_present_lists.txt')
+with open(file_path, 'w') as file:
+    for item in pred_present_lists:
+        file.write(f"{item}\n")
+
+# Write gt_present_lists to a file
+file_path = os.path.join(output_dir, 'Phi_KP20K_gt_present_lists.txt')
+with open(file_path, 'w') as file:
+    for item in gt_present_lists:
+        file.write(f"{item}\n")
+
+# Write pred_absent_lists to a file
+file_path = os.path.join(output_dir, 'Phi_KP20K_pred_absent_lists.txt')
+with open(file_path, 'w') as file:
+    for item in pred_absent_lists:
+        file.write(f"{item}\n")
+
+# Write gt_absent_lists to a file
+file_path = os.path.join(output_dir, 'Phi_KP20K_gt_absent_lists.txt')
+with open(file_path, 'w') as file:
+    for item in gt_absent_lists:
+        file.write(f"{item}\n")
+
+# Write all_pred_keyphrases to a file
+file_path = os.path.join(output_dir, 'Phi_KP20K_Prediction_Keyphrases_combined.txt')
+with open(file_path, 'w') as file:
+    for item in all_pred_keyphrases:
+        file.write(f"{item}\n")
+
+print("saved successfully")
+
+
