@@ -248,7 +248,7 @@ for idx, (kpp_values_instance, pred_keyphrases_instance) in enumerate(zip(all_kp
     if len(kpp_values_instance) != len(pred_keyphrases_instance):
         print("Lengths are not equal for instance at index:", idx)
         print("all_separated_probabilities[idx")
-        print(all_separated_probabilities[idx)
+        print(all_separated_probabilities[idx])
         print("token_predictions_instance[idx]")
         print(token_predictions_instance[idx])
         print()
